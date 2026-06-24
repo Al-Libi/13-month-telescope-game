@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>13 Months Under The Same Sky</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: Georgia, "Times New Roman", serif;
+      background: #050716;
+      color: white;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    body.game-active { cursor: none; }
+
+    #start-screen, #final-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      text-align: center;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(111, 130, 255, 0.18), transparent 30%),
+        radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.10), transparent 25%),
+        linear-gradient(180deg, #080b24, #02030b);
+      cursor: default;
+    }
+
+    .intro-box, .final-box {
+      max-width: 720px;
+      padding: 36px 28px;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 24px;
+      background: rgba(10, 14, 42, 0.72);
+      box-shadow: 0 0 50px rgba(120, 150, 255, 0.18);
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(2rem, 6vw, 4.2rem);
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      line-height: 1.8;
+      opacity: 0.92;
+    }
+
+    button {
+      margin-top: 22px;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 999px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #081026;
+      background: #fff3b0;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(255, 243, 176, 0.5);
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 120%, rgba(34, 43, 91, 0.6), transparent 40%),
+        linear-gradient(180deg, #070b26 0%, #03040e 100%);
+    }
+
+    .tiny-star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.8);
+      animation: twinkle 2.5s infinite alternate ease-in-out;
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0.25; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1.25); }
+    }
+
+    .memory-star {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: #fff6b7;
+      box-shadow: 0 0 16px #fff6b7, 0 0 34px rgba(255,246,183,0.8);
+      opacity: 0;
+      pointer-events: auto;
+      transition: opacity 0.25s ease, transform 0.15s ease;
+    }
+
+    .memory-star::before {
+      content: "✦";
+      position: absolute;
+      inset: -7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff6b7;
+      font-size: 32px;
+      text-shadow: 0 0 14px #fff6b7;
+    }
+
+    .memory-star.visible { opacity: 1; }
+
+    .memory-star.found {
+      opacity: 0.35;
+      background: #aab5ff;
+      box-shadow: 0 0 10px #aab5ff;
+    }
+
+    .memory-star:hover {
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    #telescope {
+      position: fixed;
+      width: 210px;
+      height: 210px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 20;
+      transform: translate(-50%, -50%);
+      border: 3px solid rgba(255, 255, 255, 0.65);
+      box-shadow:
+        0 0 0 9999px rgba(0,0,0,0.78),
+        inset 0 0 28px rgba(255,255,255,0.18),
+        0 0 35px rgba(200, 215, 255, 0.35);
+      display: none;
+    }
+
+    body.game-active #telescope { display: block; }
+
+    #hud {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      z-index: 30;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .hud-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(6px);
+    }
+
+    #modal {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.72);
+      cursor: default;
+    }
+
+    .modal-card {
+      width: min(720px, 94vw);
+      max-height: 90vh;
+      overflow: auto;
+      border-radius: 24px;
+      background: #101632;
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 0 50px rgba(120,150,255,0.28);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .modal-card img {
+      width: 100%;
+      max-height: 430px;
+      object-fit: contain;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.06);
+      margin: 12px 0;
+    }
+
+    .moment-number {
+      font-family: Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 0.78rem;
+      opacity: 0.75;
+    }
+
+    #modal-title {
+      margin: 8px 0;
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+    }
+
+    #modal-text {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      opacity: 0.95;
+      white-space: pre-line;
+    }
+
+    #final-screen {
+      display: none;
+      z-index: 70;
+    }
+
+    .final-box p {
+      white-space: pre-line;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      line-height: 1.8;
+    }
+
+    @media (max-width: 650px) {
+      #telescope {
+        width: 165px;
+        height: 165px;
+      }
+
+      .memory-star {
+        width: 26px;
+        height: 26px;
+      }
+
+      #hud { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="game"></div>
+  <div id="telescope"></div>
+
+  <div id="hud">
+    <div class="hud-pill">🔭 Move the telescope and find the stars</div>
+    <div class="hud-pill"><span id="count">0</span>/13 found</div>
+  </div>
+
+  <section id="start-screen">
+    <div class="intro-box">
+      <h1>13 Months Under The Same Sky</h1>
+      <p class="subtitle">
+        You gave me a telescope to look at the stars.<br><br>
+        Tonight, there are 13 stars hidden in the sky.<br>
+        Each one holds one of my favourite memories with you.
+      </p>
+      <button id="start-btn">Start looking through the telescope</button>
+    </div>
+  </section>
+
+  <section id="modal">
+    <div class="modal-card">
+      <div class="moment-number" id="moment-number"></div>
+      <h2 id="modal-title"></h2>
+      <img id="modal-image" src="" alt="Memory photo" />
+      <p id="modal-text"></p>
+      <button id="close-modal">Keep looking</button>
+    </div>
+  </section>
+
+  <section id="final-screen">
+    <div class="final-box">
+      <h1>Happy 13 Months ❤️</h1>
+      <p>You gave me a telescope to look at the stars.
+
+But my favourite discoveries this year weren't in the night sky.
+
+They were all the moments I got to spend with you.
+
+Thank you for always being there for me, especially during the moments when I needed you most.
+
+Happy 13 months, Mezhgan ❤️</p>
+    </div>
+  </section>
+
+  <script>
+    const memories = [
+      {
+        title: "We Met!!!!",
+        text: "The day my life changed forever. I had no idea just how important you would become to me.",
+        image: "images/month1.jpg"
+      },
+      {
+        title: "Our First Date",
+        text: "The day we went from two people talking to two people creating memories together.",
+        image: "images/month2.jpg"
+      },
+      {
+        title: "Playing Games Together",
+        text: "Endless games, laughs, competitiveness, and some of my favourite early memories with you.",
+        image: "images/month3.jpg"
+      },
+      {
+        title: "When I Knew I Loved You",
+        text: "There wasn't one dramatic moment. Somewhere between the conversations, the laughter, and the memories we were making, I realised I had fallen in love with you.",
+        image: "images/month4.jpg"
+      },
+      {
+        title: "Our First Birthday Together",
+        text: "The first time I got to celebrate one of your special days by your side.",
+        image: "images/month5.jpg"
+      },
+      {
+        title: "Our Biggest Fight",
+        text: "Not because we argued, but because we chose each other afterwards and came back stronger.",
+        image: "images/month6.jpg"
+      },
+      {
+        title: "Calling You Every Day",
+        text: "Talking to you became part of my routine. The days we couldn't felt strangely incomplete.",
+        image: "images/month7.jpg"
+      },
+      {
+        title: "That Conversation on the Boat",
+        text: "29 January. I was on the ferry from Hiroshima to Miyajima when we had one of those conversations only we could have, and somehow it became one of the funniest and most memorable moments of our relationship.",
+        image: "images/month8.jpg"
+      },
+      {
+        title: "Our First Valentine's Day",
+        text: "The first Valentine's Day we celebrated together, and the day I got to show you just how much you mean to me.",
+        image: "images/month9.jpg"
+      },
+      {
+        title: "Our Second Date",
+        text: "It may have taken 10 months, but it was worth the wait ❤️",
+        image: "images/month10.jpg"
+      },
+      {
+        title: "Meeting Your Parents",
+        text: "A moment that meant a lot to me because it felt like another step forward in our journey.",
+        image: "images/month11.jpg"
+      },
+      {
+        title: "Our First Kiss",
+        text: "A moment I'd waited for and one I'll never forget.",
+        image: "images/month12.jpg"
+      },
+      {
+        title: "Sleeping Together on FaceTime",
+        text: "On 7 April, we fell asleep together on FaceTime for the first time.\n\nIt was one of those simple moments that probably doesn't seem important to anyone else, but it meant a lot to me.\n\nThis photo isn't from that night, but every time I see it, it reminds me of how lucky I am to have you in my life.",
+        image: "images/month13.jpg"
+      }
+    ];
+
+    const starPositions = [
+      [12, 18], [30, 24], [53, 16], [75, 22], [88, 38],
+      [18, 46], [40, 43], [62, 49], [80, 58], [25, 68],
+      [50, 72], [70, 78], [90, 82]
+    ];
+
+    const game = document.getElementById("game");
+    const telescope = document.getElementById("telescope");
+    const startScreen = document.getElementById("start-screen");
+    const startBtn = document.getElementById("start-btn");
+    const modal = document.getElementById("modal");
+    const closeModal = document.getElementById("close-modal");
+    const count = document.getElementById("count");
+    const finalScreen = document.getElementById("final-screen");
+
+    let found = new Set();
+    let currentStar = null;
+    let gameStarted = false;
+
+    for (let i = 0; i < 120; i++) {
+      const s = document.createElement("div");
+      s.className = "tiny-star";
+      s.style.left = Math.random() * 100 + "%";
+      s.style.top = Math.random() * 100 + "%";
+      s.style.animationDelay = Math.random() * 3 + "s";
+      game.appendChild(s);
+    }
+
+    memories.forEach((memory, index) => {
+      const star = document.createElement("div");
+      star.className = "memory-star";
+      star.dataset.index = index;
+      star.style.left = starPositions[index][0] + "%";
+      star.style.top = starPositions[index][1] + "%";
+      star.addEventListener("click", () => openMemory(index, star));
+      game.appendChild(star);
+    });
+
+    startBtn.addEventListener("click", () => {
+      startScreen.style.display = "none";
+      document.body.classList.add("game-active");
+      gameStarted = true;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!gameStarted) return;
+
+      telescope.style.left = e.clientX + "px";
+      telescope.style.top = e.clientY + "px";
+
+      document.querySelectorAll(".memory-star").forEach(star => {
+        const rect = star.getBoundingClientRect();
+        const sx = rect.left + rect.width / 2;
+        const sy = rect.top + rect.height / 2;
+        const distance = Math.hypot(e.clientX - sx, e.clientY - sy);
+
+        if (distance < 105) {
+          star.classList.add("visible");
+        } else if (!found.has(Number(star.dataset.index))) {
+          star.classList.remove("visible");
+        }
+      });
+    });
+
+    document.addEventListener("touchmove", (e) => {
+      if (!gameStarted) return;
+      const touch = e.touches[0];
+      telescope.style.left = touch.clientX + "px";
+      telescope.style.top = touch.clientY + "px";
+
+      document.querySelectorAll(".memory-star").forEach(star => {
+        const rect = star.getBoundingClientRect();
+        const sx = rect.left + rect.width / 2;
+        const sy = rect.top + rect.height / 2;
+        const distance = Math.hypot(touch.clientX - sx, touch.clientY - sy);
+
+        if (distance < 100) star.classList.add("visible");
+      });
+    }, { passive: true });
+
+    function openMemory(index, star) {
+      currentStar = star;
+      const memory = memories[index];
+
+      document.getElementById("moment-number").textContent = "Moment " + (index + 1);
+      document.getElementById("modal-title").textContent = memory.title;
+      document.getElementById("modal-text").textContent = memory.text;
+      document.getElementById("modal-image").src = memory.image;
+
+      modal.style.display = "flex";
+      document.body.classList.remove("game-active");
+    }
+
+    closeModal.addEventListener("click", () => {
+      modal.style.display = "none";
+      document.body.classList.add("game-active");
+
+      if (currentStar) {
+        const index = Number(currentStar.dataset.index);
+        found.add(index);
+        currentStar.classList.add("found", "visible");
+        count.textContent = found.size;
+      }
+
+      if (found.size === memories.length) {
+        setTimeout(() => {
+          document.body.classList.remove("game-active");
+          finalScreen.style.display = "flex";
+        }, 500);
+      }
+    });
+  </script>
+</body>
+</html>
